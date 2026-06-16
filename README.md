@@ -9,8 +9,6 @@ Sources involved in human-machine interaction based on parallel tribobiomimetic 
 - [System Requirements](#system-requirements)
   - [Hardware Requirements](#hardware-requirements)
   - [Software Requirements](#software-requirements)
-- [Installation Guide](#installation-guide)
-- [Quick Demo](#quick-demo)
 
 ---
 
@@ -108,3 +106,11 @@ raw\MNIST\raw\
 ## License
 
 This project is licensed under the **MIT License**.
+
+**Disclaimer**: This project contains MATLAB code developed by the author. 
+A valid MATLAB license from The MathWorks, Inc. is required to run this code. 
+The code provided here is for research/demonstration purposes only and is 
+not affiliated with or endorsed by The MathWorks, Inc.
+
+
+
