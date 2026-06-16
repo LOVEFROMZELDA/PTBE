@@ -9,6 +9,8 @@ Sources involved in human-machine interaction based on parallel tribobiomimetic 
 - [System Requirements](#system-requirements)
   - [Hardware Requirements](#hardware-requirements)
   - [Software Requirements](#software-requirements)
+- [Installation Guide](#installation-guide)
+- [Quick Demo](#quick-demo)
 
 ---
 
@@ -16,42 +18,34 @@ Sources involved in human-machine interaction based on parallel tribobiomimetic 
 
 ### Hardware Requirements
 
-`PTBE` package requires only a standard computer with enough RAM to support the in-memory operations.
+Sources of `PTBE` requires a standard computer with enough VRAM to support the inference and training.
 For optimal performance we recommend:
 
 - **RAM:** 16 GB or more  
 - **CPU:** 4+ cores @ 3.3 GHz or faster
-
-Benchmark timings reported below were collected on a machine with 32 GB RAM, 12 cores @ 3.4 GHz, and a 50 Mbps internet connection.
+- **Inference minimum VRAM**: 4GB (8GB+ recommended)
+- **Training recommended VRAM**: 12GB+ (this project was trained on an RTX 4070 SUPER 16GB)
 
 ### Software Requirements
 
 #### OS Requirements
 
-This package is supported for **Windows**. The package has been tested on the following systems:
+The package has been tested on the following systems:
 
 - Windows 10 / 11
 
-#### Python Version
+#### MATLAB Version
 
-- **Python 3.9.18** (64-bit)
+- **MATLAB R2022b**
 
-#### Python Dependencies
+#### MATLAB Add-On
 
-`FLEXI` relies on the standard scientific-Python stack:
-
-- numpy==1.26.0  
-- scipy==1.11.4  
-- scikit-learn==1.3.2  
-- pandas==2.2.2  
-- seaborn==0.13.2  
-- torch==2.1.0  
-- torchvision==0.16.0  
-- matplotlib==3.8.2  
-- librosa==0.10.1  
-- os (built-in)
-
-(All dependencies will be installed automatically when you run the setup script.)
+- **Deep Learning Toolbox** v14.5
+- **MATLAB Compiler** v8.5
+- **Parallel Computing Toolbox** v7.7
+- **Signal Processing Toolbox** v9.1
+- **Statistics and Machine Learning Toolbox** v12.4
+- **MATLAB Runtime(R2022b)**
 
 ---
 
@@ -59,15 +53,12 @@ This package is supported for **Windows**. The package has been tested on the fo
 
 ### Install from GitHub
 
-git clone https://github.com/Adai2020/FLEXI.git  
-cd FLEXI  
-python3 setup.py install  
-
-The entire process typically finishes in ~10 minutes on the recommended hardware.
+Visit the official MathWorks website https://www.mathworks.com/downloads to get MATLAB.
+Install all the Add-On before getting started.
 
 ## Quick Demo
 
-### Instructions to run on data
+### Instructions to run the application
 
 1. Clone or download the repository.  
 2. Open the notebook `FLEXI-1-ECG-test.ipynb`.  
@@ -83,23 +74,7 @@ The test accuracy after quantization is: 99.20%
 
 ### Expected run time
 
-3s
-
-## Data Usage
-### Example: MNIST
-#### Two ways to download MNIST:
-From the official MNIST website, download the four gzipped files.  
-Use Python libraries like torchvision.datasets.MNIST (automatically downloads when initialized).  
-#### File placement:
-Place the downloaded files in the following directory structure within FLEXI:
-
-raw\MNIST\raw\
-  t10k-images-idx3-ubyte.gz  
-  t10k-labels-idx1-ubyte.gz  
-  train-images-idx3-ubyte.gz  
-  train-labels-idx1-ubyte.gz  
-
-
+1s
 
 ---
 
