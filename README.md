@@ -61,20 +61,19 @@ Install all the Add-On before getting started.
 ### Instructions to run the application
 
 1. Clone or download the repository.  
-2. Open the notebook `FLEXI-1-ECG-test.ipynb`.  
-3. Double-click the notebook to launch Jupyter.  
-4. Select **Kernel → Change Kernel** and choose the Python environment you just created.  
-5. Click **Cell → Run All** to execute the entire demo.
+2. Open `Interaction interface/App/for_redistribution_files_only/App.exe`.  
+3. Choose one **Task**. Click **Intialize**.
+4. Click **Load Data** to load the data.
+5. Click **Identify Data** to identify the catogory of this data.
+6. Click **Clear Data** to get ready for the next cycle of loading and identification.
 
 ### Expected output
 
-The network has 122 weights that need to be deployed.  
-NET_1k_ECG(...)  
-The test accuracy after quantization is: 99.20%  
+The app will display the probability distribution of the data loaded and the corresponding scenario.
 
 ### Expected run time
 
-1s
+1min
 
 ---
 
@@ -86,6 +85,3 @@ This project is licensed under the **MIT License**.
 A valid MATLAB license from The MathWorks, Inc. is required to run this code. 
 The code provided here is for research/demonstration purposes only and is 
 not affiliated with or endorsed by The MathWorks, Inc.
-
-
-
