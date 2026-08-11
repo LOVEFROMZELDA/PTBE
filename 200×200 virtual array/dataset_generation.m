@@ -6,7 +6,7 @@ output = 'data';
 
 params.fs = 1000;
 params.array_size = 200;
-params.time_per_frame = 0.1;
+params.time_total = 1;
 params.selected_row = 100;
 params.selected_col = 100;
 params.category = 0;

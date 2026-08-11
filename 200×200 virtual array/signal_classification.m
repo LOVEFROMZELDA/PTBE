@@ -8,7 +8,8 @@ sigdata = cellfun(@(x) x.all_data, sigdata_raw, 'UniformOutput', false);
 % summary(labels);
 
 %% Split data
-idx = splitlabels(labels,[0.8 0.1]);
+rng(2026);
+idx = splitlabels(labels,[0.8 0.1], 'randomized');
 
 trainidx = idx{1};
 validx = idx{2};
@@ -27,7 +28,6 @@ testlabels = labels(testidx);
 inputHeight = 200;
 inputWidth = 200;
 numChannels = 1;
-numFrames = 200;
 numClasses = 10;
 featureSize = 25 * 25 * 16;
 
@@ -41,12 +41,17 @@ lgraph = addLayers(lgraph,tempLayers);
 
 tempLayers = [
     convolution2dLayer([3 3],4,"Name","conv1","Padding","same")
+    batchNormalizationLayer("Name","bn1")
     reluLayer("Name","relu1")
     maxPooling2dLayer([5 5],"Name","pool1","Stride",[5 5])
+
     convolution2dLayer([3 3],8,"Name","conv2","Padding","same")
+    batchNormalizationLayer("Name","bn2")
     reluLayer("Name","relu2")
     maxPooling2dLayer([5 5],"Name","pool2","Stride",[5 5]);
+
     convolution2dLayer([3 3],12,"Name","conv3","Padding","same")
+    batchNormalizationLayer("Name","bn3")
     reluLayer("Name","relu3")
     maxPooling2dLayer([4 4],"Name","pool3","Stride",[4 4])];
 lgraph = addLayers(lgraph,tempLayers);
@@ -66,7 +71,7 @@ clear tempLayers;
 lgraph = connectLayers(lgraph,"fold/out","conv1");
 lgraph = connectLayers(lgraph,"fold/miniBatchSize","unfold/miniBatchSize");
 lgraph = connectLayers(lgraph,"pool3","unfold/in");
-% plot(lgraph);
+plot(lgraph);
 
 MiniBatchSize = 16;
 Val_Freq = floor(size(traindata, 1) / MiniBatchSize);

@@ -26,11 +26,12 @@ else
     array_size = 200;
 end
 
-if isfield(params, 'time_per_frame')
-    time_per_frame = params.time_per_frame;
+if isfield(params, 'time_total')
+    time_total = params.time_total;
 else
-    time_per_frame = 0.1;
+    time_total = 1;
 end
+time_per_frame = time_total / array_size;
 
 if isfield(params, 'selected_row')
     selected_row = params.selected_row;

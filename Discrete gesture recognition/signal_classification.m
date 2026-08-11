@@ -39,6 +39,21 @@ globalStd  = std(allData);
 globalStd(globalStd == 0) = 1;
 sigdata = cellfun(@(x) (x - globalMean) ./ globalStd, sigdata, 'UniformOutput', false);
 
+% % Normalize respectively
+% sigdata = cellfun(@(x) (x - mean(x, 2)) ./ (std(x,0,2) + 1e-8), sigdata, 'UniformOutput', false);
+
+%% Check
+
+% n = 5;
+% 
+% figure;
+% hold on
+% for i = (1:100) + (n-1) * 100
+%     plot(sigdata{i}(:, 1));
+%     plot(sigdata{i}(:, 2));
+% end
+% hold off
+
 %% Split data for training, validation, and testing
 
 inputSize = 3100;
@@ -49,6 +64,15 @@ idx = splitlabels(labels,[0.8 0.1]);
 trainidx = idx{1};
 validx = idx{2};
 testidx = idx{3};
+
+% traindata = sigdata(trainidx);
+% trainlabels = labels(trainidx);
+% 
+% valdata = sigdata(validx);
+% vallabels = labels(validx);
+% 
+% testdata = sigdata(testidx);
+% testlabels = labels(testidx);
 
 traindata = prepareDataForImageInput(sigdata(trainidx), inputSize, numChannels);
 trainlabels = labels(trainidx);
@@ -65,6 +89,8 @@ inputSize = 3100;
 numChannels = 2;
 numClasses = 14;
 flattenedSize = inputSize / 4 * 8;
+
+% Create layers using the Deep Network Designer
 
 layers = [
     imageInputLayer([1 inputSize numChannels],"Name","imageinput")
@@ -104,12 +130,14 @@ opts = trainingOptions("adam", ...
 %% Train the Network
 
 NET = trainNetwork(traindata,trainlabels,layers,opts);
+% save('.\Fabric\Net.mat', 'NET', "globalMean", "globalStd");
 
 %% Evaluate the Network
 
 predlabels = classify(NET,testdata,'MiniBatchSize',MiniBatchSize);
 acc = mean(predlabels == testlabels);
 confusionchart(testlabels,predlabels,"Normalization","row-normalized");
+save("workspace.mat");
 
 %% Function
 

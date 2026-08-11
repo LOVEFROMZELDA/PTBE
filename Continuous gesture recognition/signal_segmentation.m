@@ -6,10 +6,10 @@ numChannels = 16;
 
 %% plot all data
 
-% folder_path = ".\motion_data\*";
+% folder_path = ".\data_origin\*";
 % file_names = dir(fullfile(folder_path, "*.xlsx"));
 % 
-% for i = 1:10
+% for i = 1:1
 %     figure;
 %     hold on
 %     for j = 1:10
@@ -19,7 +19,7 @@ numChannels = 16;
 %         plot(t, m(1:len,2:end), LineWidth=1);  
 %     end
 %     hold off
-%     txt = extractAfter(file_names(ind).folder, "motion_data\");
+%     txt = extractAfter(file_names(ind).folder, "data_origin\");
 %     title(txt);
 % end
 
@@ -32,7 +32,7 @@ params.snr_db = 10;
 params.density = 0.03;
 params.amplitude_factor = 1.5;
 
-for i = 1:10
+for i = 1:1
     for j = 1:100
         ind = (i-1) * 100 + j;
         file_path = fullfile(file_names(ind).folder, file_names(ind).name);
@@ -42,15 +42,13 @@ for i = 1:10
         
         % add noise
         for k = 1:numChannels
-            if m(1, k+1) ~= 0
-                m_noisy(:, k) = addNoiseToSignal(m(:, k+1), 'both', params);
-            end
+            m_noisy(:, k) = addNoiseToSignal(m(:, k+1), 'both', params);
         end
         if any(isnan(m_noisy), 'all')
             error('i=%d, j=%d', i, j);
         end
 
-        txt_folder = extractAfter(file_names(ind).folder, "motion_data\");
+        txt_folder = extractAfter(file_names(ind).folder, "data_origin\");
         txt_file = extractBetween(file_names(ind).name, "_", ".");
         if str2double(txt_folder) < 10
             name_dir = ".\data\0"+txt_folder;

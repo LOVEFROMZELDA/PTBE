@@ -25,9 +25,14 @@ clear; clc;
 folder_path = ".\data_origin\*";
 file_names = dir(fullfile(folder_path, "*.xlsx"));
 
-params.snr_db = 13;
-params.density = 0.03;
-params.amplitude_factor = 1.5;
+params.snr_db = 20;               % 高斯噪声信噪比
+params.density = 0.05;            % 椒盐噪声密度
+params.amplitude_factor = 1.5;    % 椒盐噪声幅度因子
+
+name_dir_app = ".\Fabric\";
+if ~exist(name_dir_app, "dir")
+    mkdir(name_dir_app);
+end
 
 for i = 1:14
     for j = 1:10
@@ -71,6 +76,12 @@ for i = 1:14
             writematrix(mtmp(1:3100, :), path_new);
         end
     end
+    Data = m(seq_tmp, 2:3);
+    Data = Data(1:3100, :);
+    DataNoisy = mtmp(1:3100, :);
+    mat_file = sprintf("%02d.mat", str2double(txt_folder));
+    output = name_dir_app + mat_file;
+%     save(output, 'Data', "DataNoisy");
 end
 
 
