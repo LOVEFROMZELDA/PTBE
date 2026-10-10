@@ -1,15 +1,24 @@
-%% ========================================================================
-%  CNN-LSTM 超参数消融实验（Sequence Folding 架构）
-%  适配你的原始代码风格，保证池化尺寸整除
-%  策略：MaxEpochs=12（加速），仅验证集评估
-% ========================================================================
 
-clear; clc; close all; rng(2026);  % 固定种子
+%% CNN-LSTM hyperparameter ablation
+% Pooling configurations must preserve valid spatial dimensions.
+% Each candidate trains for 12 epochs and is evaluated on validation data.
 
-%% 1. 数据加载与划分（完全沿用你的原始代码）
+clear; clc; close all; rng(2026, 'twister');
+
+scriptDir = fileparts(mfilename('fullpath'));
+datasetDir = fullfile(scriptDir, 'dataset');
+resultsDir = fullfile(scriptDir, 'results');
+if ~isfolder(datasetDir)
+    error('Extract dataset.zip to: %s', datasetDir);
+end
+if ~isfolder(resultsDir)
+    mkdir(resultsDir);
+end
+
+%% Load and split data
 fprintf('========== 加载数据 ==========\n');
-sigds = signalDatastore(".\dataset\", IncludeSubfolders=true, ReadFcn=@load);
-labels = folders2labels(".\dataset\");
+sigds = signalDatastore(datasetDir, IncludeSubfolders=true, ReadFcn=@load);
+labels = folders2labels(datasetDir);
 sigdata_raw = readall(sigds);
 sigdata = cellfun(@(x) x.all_data, sigdata_raw, 'UniformOutput', false);
 
@@ -25,21 +34,17 @@ testlabels = labels(testidx);
 
 fprintf('训练集: %d, 验证集: %d\n', length(traindata), length(valdata));
 
-% 固定参数
+% Fixed settings.
 inputHeight = 200; inputWidth = 200; numChannels = 1; numClasses = 10;
 MiniBatchSize = 16;
-Epochs = 12;  % 消融实验仅跑12轮，看趋势即可
+Epochs = 12;
 
-%% ========================================================================
-%  实验 1：卷积核尺寸（Kernel Size）消融
-%  候选：3×3（默认），5×5，7×7
-% ========================================================================
+%% Experiment 1: Kernel size
 
 fprintf('\n========== 实验 1：卷积核尺寸消融 ==========\n');
 kernelCandidates = [3, 5, 7];
 results_kernel = table();
 
-% 固定其他参数
 defaultFilters = [4, 8, 12];
 defaultPool = struct('w', {[5,5], [5,5], [4,4]}, 's', {[5,5], [5,5], [4,4]});
 defaultLSTM = 16;
@@ -60,12 +65,9 @@ for i = 1:length(kernelCandidates)
 end
 
 disp(results_kernel);
-save('Ablation_LSTM_Kernel.mat', 'results_kernel');
+save(fullfile(resultsDir, 'Ablation_LSTM_Kernel.mat'), 'results_kernel');
 
-%% ========================================================================
-%  实验 2：CNN 通道数消融
-%  候选：[4,8,12]（默认），[8,16,24]，[2,4,6]
-% ========================================================================
+%% Experiment 2: Filter counts
 
 fprintf('\n========== 实验 2：CNN通道数消融 ==========\n');
 filterCandidates = {[4,8,12], [8,16,24], [2,4,6]};
@@ -86,36 +88,21 @@ for i = 1:length(filterCandidates)
 end
 
 disp(results_filters);
-save('Ablation_LSTM_Filters.mat', 'results_filters');
+save(fullfile(resultsDir, 'Ablation_LSTM_Filters.mat'), 'results_filters');
 
-%% ========================================================================
-%  实验 3：池化配置消融（注意：必须保证特征图尺寸整除）
-%  默认：Pool1=[5,5]/5, Pool2=[5,5]/5, Pool3=[4,4]/4
-%  缩小：Pool1=[3,3]/3, Pool2=[3,3]/3, Pool3=[2,2]/2
-%  注意：输入 200×200，经过两次 stride=5 得到 8×8，再经过 stride=4 得到 2×2
-%        如果改成 stride=3/2，需要确保最终尺寸为正整数
-%  因此，安全起见，只做“大池化”与“小池化”两组对比
-% ========================================================================
+%% Experiment 3: Pooling configuration
 
 fprintf('\n========== 实验 3：池化配置消融 ==========\n');
-% 配置 A（默认）：大池化，强压缩
+
 poolA = struct('w', {[5,5], [5,5], [4,4]}, 's', {[5,5], [5,5], [4,4]});
-% 配置 B（小池化）：弱压缩
+
 poolB = struct('w', {[3,3], [3,3], [2,2]}, 's', {[3,3], [3,3], [2,2]});
-% 注意：200 -> /3=66.67 不是整数！所以 B 方案需要调整。
-% 为保证整除，输入必须能被所有 stride 连乘整除。
-% 200 / (3*3*2) = 200/18 = 11.11，不可行。
-% 因此只能采用 stride=5 和 stride=4，或者改变输入尺寸。
-% 鉴于复杂性，本实验只保留默认配置，并在回复中说明池化尺寸受输入尺寸约束。
 
 fprintf('注意：池化步长受输入尺寸(200×200)约束，必须保证整除。\n');
 fprintf('默认配置 [5,5]/[5,5]/[4,4] 经验证可行（200→40→8→2）。\n');
 fprintf('受限于架构约束，池化配置固定为默认值，不做消融。\n');
 
-%% ========================================================================
-%  实验 4：LSTM 单元数消融
-%  候选：8，16（默认），32
-% ========================================================================
+%% Experiment 4: LSTM units
 
 fprintf('\n========== 实验 4：LSTM单元数消融 ==========\n');
 lstmCandidates = [16, 8, 32];
@@ -136,12 +123,9 @@ for i = 1:length(lstmCandidates)
 end
 
 disp(results_lstm);
-save('Ablation_LSTM_LSTMUnits.mat', 'results_lstm');
+save(fullfile(resultsDir, 'Ablation_LSTM_LSTMUnits.mat'), 'results_lstm');
 
-%% ========================================================================
-%  实验 5：Dropout 比率消融
-%  候选：0.3，0.5（默认），0.7
-% ========================================================================
+%% Experiment 5: Dropout rate
 
 fprintf('\n========== 实验 5：Dropout比率消融 ==========\n');
 dropCandidates = [0.5, 0.3, 0.7];
@@ -162,15 +146,13 @@ for i = 1:length(dropCandidates)
 end
 
 disp(results_drop);
-save('Ablation_LSTM_Dropout.mat', 'results_drop');
+save(fullfile(resultsDir, 'Ablation_LSTM_Dropout.mat'), 'results_drop');
 
-%% ========================================================================
-%  汇总所有结果到 Excel
-% ========================================================================
+%% Export summary
 
 fprintf('\n========== 汇总结果到 Excel ==========\n');
 
-% 加载所有结果文件
+% Result files to combine.
 matFiles = {
     'KernelSize', 'Ablation_LSTM_Kernel.mat', 'results_kernel';
     'Filters',    'Ablation_LSTM_Filters.mat', 'results_filters';
@@ -178,30 +160,29 @@ matFiles = {
     'Dropout',    'Ablation_LSTM_Dropout.mat', 'results_drop'
 };
 
-outputFile = 'Ablation_CNN_LSTM_Summary.xlsx';
+outputFile = fullfile(resultsDir, 'Ablation_CNN_LSTM_Summary.xlsx');
 
 for i = 1:size(matFiles, 1)
     sheetName = matFiles{i, 1};
     matFile = matFiles{i, 2};
     varName = matFiles{i, 3};
     
-    if exist(matFile, 'file') == 2
-        load(matFile);
+    matPath = fullfile(resultsDir, matFile);
+    if exist(matPath, 'file') == 2
+        load(matPath);
         if exist(varName, 'var')
             data = eval(varName);
             writetable(data, outputFile, 'Sheet', sheetName);
-            fprintf('✓ 已写入: %s -> Sheet: %s\n', matFile, sheetName);
+            fprintf('Wrote %s to sheet %s.\n', matFile, sheetName);
         end
     else
-        fprintf('✗ 跳过: %s 不存在\n', matFile);
+        fprintf('Skipped missing file: %s.\n', matFile);
     end
 end
 
 fprintf('汇总完成！保存至: %s\n', outputFile);
 
-%% ========================================================================
-%  辅助函数（完全沿用你的原始代码）
-% ========================================================================
+%% Local functions
 
 function sequences = prepareSequenceData(cellData)    
     numSamples = length(cellData);
@@ -214,23 +195,23 @@ function sequences = prepareSequenceData(cellData)
     end
 end
 
-%% 2. 定义网络构建函数（动态配置卷积核、通道数、池化尺寸、LSTM单元、Dropout）
+%% Build a configurable CNN-LSTM
 
 function lgraph = buildCNNLSTMGraph(inputHeight, inputWidth, numChannels, numClasses, ...
                                      kernelSize, numFilters, poolConfig, lstmUnits, dropoutRate)
-    % kernelSize: 标量，如 3
-    % numFilters: [f1, f2, f3]，如 [4,8,12]
-    % poolConfig: 结构体，包含 window 和 stride，如 struct('w',[5,5], 's',[5,5])
+% kernelSize is a scalar.
+% numFilters contains one value per convolution block.
+% poolConfig stores each pooling window and stride.
     
     lgraph = layerGraph();
     
-    % 输入 + 折叠层
+% Sequence input and folding.
     tempLayers = [
         sequenceInputLayer([inputHeight inputWidth numChannels], "Name", "input")
         sequenceFoldingLayer("Name", "fold")];
     lgraph = addLayers(lgraph, tempLayers);
     
-    % CNN 部分
+% Convolution blocks.
     convLayers = [
         convolution2dLayer([kernelSize kernelSize], numFilters(1), "Name", "conv1", "Padding", "same")
         batchNormalizationLayer("Name", "bn1")
@@ -248,7 +229,7 @@ function lgraph = buildCNNLSTMGraph(inputHeight, inputWidth, numChannels, numCla
         maxPooling2dLayer(poolConfig(3).w, "Name", "pool3", "Stride", poolConfig(3).s)];
     lgraph = addLayers(lgraph, convLayers);
     
-    % RNN 部分（解折叠 + LSTM）
+% Sequence unfolding and LSTM.
     rnnLayers = [
         sequenceUnfoldingLayer("Name", "unfold")
         flattenLayer("Name", "flatten")
@@ -259,13 +240,13 @@ function lgraph = buildCNNLSTMGraph(inputHeight, inputWidth, numChannels, numCla
         classificationLayer("Name", "output")];
     lgraph = addLayers(lgraph, rnnLayers);
     
-    % 连接
+% Graph connections.
     lgraph = connectLayers(lgraph, "fold/out", "conv1");
     lgraph = connectLayers(lgraph, "fold/miniBatchSize", "unfold/miniBatchSize");
     lgraph = connectLayers(lgraph, "pool3", "unfold/in");
 end
 
-%% 3. 定义统一训练与评估函数（减少重复代码）
+%% Train and evaluate one candidate
 
 function [valAcc, numParams, trainTime] = trainAndEvaluate(lgraph, traindata, trainlabels, valdata, vallabels, MiniBatchSize, Epochs)
     Val_Freq = floor(length(traindata) / MiniBatchSize);
@@ -289,7 +270,7 @@ function [valAcc, numParams, trainTime] = trainAndEvaluate(lgraph, traindata, tr
     valPred = classify(net, valdata, 'MiniBatchSize', MiniBatchSize);
     valAcc = mean(valPred == vallabels);
     
-    % 统计参数量
+% Count trainable parameters.
     numParams = 0;
     for l = 1:length(net.Layers)
         if isprop(net.Layers(l), 'Weights')

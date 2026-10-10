@@ -1,9 +1,16 @@
 clear; clc;
+rng(2026, 'twister');
 
-%% Set parameters
-input = '.\waveform\sample.xlsx';
-output = 'data';
+scriptDir = fileparts(mfilename('fullpath'));
+addpath(scriptDir);
+waveformPath = fullfile(scriptDir, 'waveform', 'sample.xlsx');
+datasetDir = fullfile(scriptDir, 'dataset');
 
+if ~isfile(waveformPath)
+    error('Waveform file not found: %s', waveformPath);
+end
+
+%% Configure generator
 params.fs = 1000;
 params.array_size = 200;
 params.time_total = 1;
@@ -13,38 +20,35 @@ params.category = 0;
 params.speed = 4;
 params.delta = 4.5;
 
-selected_row = zeros(1, 1200);
-for i = 1:12
-    unique_numbers = randperm(141, 100) + 29;
-    shuffled_numbers = unique_numbers(randperm(100));
-    
-    start_idx = (i-1) * 100 + 1;
-    end_idx = i * 100;
-    selected_row(start_idx:end_idx) = shuffled_numbers;
+selectedRow = zeros(1, 1200);
+for block = 1:12
+    uniqueNumbers = randperm(141, 100) + 29;
+    shuffledNumbers = uniqueNumbers(randperm(100));
+    startIndex = (block - 1) * 100 + 1;
+    endIndex = block * 100;
+    selectedRow(startIndex:endIndex) = shuffledNumbers;
 end
 
 %% Generate dataset
 for category = 1:10
     params.category = category;
-    
-    for i = 1:100
-        params.selected_row = selected_row(i*category);
-        params.selected_col = selected_row(i*category + 200);
 
-        txt_folder = sprintf("%02d", category);
-        txt_file = sprintf("%03d.mat", i);
-        name_dir = ".\dataset\"+txt_folder;
-        if ~exist(name_dir, "dir")
-            mkdir(name_dir);
-        end
-        output = name_dir + "\" + num2str(category) + "_" + txt_file;
+    outputDir = fullfile(datasetDir, sprintf('%02d', category));
+    if ~isfolder(outputDir)
+        mkdir(outputDir);
+    end
+
+    for sampleId = 1:100
+        params.selected_row = selectedRow(sampleId * category);
+        params.selected_col = selectedRow(sampleId * category + 200);
+        outputPath = fullfile(outputDir, sprintf('%d_%03d.mat', category, sampleId));
 
         if ismember(category, 1:8)
-            myFun_sweep(input, output, params);
+            myFun_sweep(waveformPath, outputPath, params);
         elseif ismember(category, 9:10)
-            myFun_press(input, output, params);
+            myFun_press(waveformPath, outputPath, params);
         else
-            error('No such category %d.', category);
+            error('No such category: %d.', category);
         end
     end
 end

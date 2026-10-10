@@ -1,87 +1,56 @@
 # PTBE
 
-Sources involved in human-machine interaction based on parallel tribobiomimetic electroreceptors (PTBE), including three neural networks and one application. 
-
----
-
-## Contents
-
-- [System Requirements](#system-requirements)
-  - [Hardware Requirements](#hardware-requirements)
-  - [Software Requirements](#software-requirements)
-- [Installation Guide](#installation-guide)
-- [Quick Demo](#quick-demo)
-
----
+Source code for human-machine interaction based on parallel tribobiomimetic electroreceptors (PTBE), including three neural-network tasks and one application.
 
 ## System Requirements
 
-### Hardware Requirements
+### Hardware
 
-Sources of `PTBE` requires a standard computer with enough VRAM to support the inference and training.
-For optimal performance we recommend:
+A standard computer can run the inference demos. A CUDA-capable GPU is recommended for training.
 
-- **RAM:** 16 GB or more  
-- **CPU:** 4+ cores @ 3.3 GHz or faster
-- **Inference minimum VRAM**: 4GB (8GB+ recommended)
-- **Training recommended VRAM**: 12GB+ (this project was trained on an RTX 4070 SUPER 16GB)
+- **RAM:** 16 GB or more
+- **CPU:** 4+ cores at 3.3 GHz or faster
+- **Inference VRAM:** 4 GB minimum, 8 GB or more recommended
+- **Training VRAM:** 12 GB or more recommended
 
-### Software Requirements
+### Software
 
-#### OS Requirements
+- Windows 10 or 11
+- MATLAB R2022b
+- Deep Learning Toolbox v14.5
+- MATLAB Compiler v8.5
+- Parallel Computing Toolbox v7.7
+- Signal Processing Toolbox v9.1
+- Statistics and Machine Learning Toolbox v12.4
+- MATLAB Runtime R2022b
 
-The package has been tested on the following systems:
+Install MATLAB and the required products from the [MathWorks website](https://www.mathworks.com/downloads).
 
-- Windows 10 / 11
+## Neural-Network Code
 
-#### MATLAB Version
+| Task | Directory | Test demo |
+|---|---|---|
+| Discrete gesture recognition | `Discrete gesture recognition/` | `CNN_sample.m` |
+| Continuous gesture recognition | `Continuous gesture recognition/` | `CNN_sample.m` |
+| 200-by-200 virtual array recognition | `200×200 virtual array/` | `CNN_sample.m` |
 
-- **MATLAB R2022b**
+Each task directory contains its data archive, data-preparation code, training code, pretrained model, test-set demo, and a task-specific README. Follow that README to place the data and run the scripts.
 
-#### MATLAB Add-On
+All stochastic data-preparation and training entry scripts use the fixed random seed `rng(2026, 'twister')`.
 
-- **Deep Learning Toolbox** v14.5
-- **MATLAB Compiler** v8.5
-- **Parallel Computing Toolbox** v7.7
-- **Signal Processing Toolbox** v9.1
-- **Statistics and Machine Learning Toolbox** v12.4
-- **MATLAB Runtime(R2022b)**
+## Application Demo
 
----
+1. Clone or download the repository.
+2. Open `Interaction interface/App/for_redistribution_files_only/App.exe`.
+3. Choose a **Task** and click **Initialize**.
+4. Click **Load Data**.
+5. Click **Identify Data** to identify the data category.
+6. Click **Clear Data** before loading the next sample.
 
-## Installation Guide
-
-### Install from GitHub
-
-Visit the official MathWorks website https://www.mathworks.com/downloads to get MATLAB.
-Install all the Add-On before getting started.
-
-## Quick Demo
-
-### Instructions to run the application
-
-1. Clone or download the repository.  
-2. Open `Interaction interface/App/for_redistribution_files_only/App.exe`.  
-3. Choose one **Task**. Click **Intialize**.
-4. Click **Load Data** to load the data.
-5. Click **Identify Data** to identify the catogory of this data.
-6. Click **Clear Data** to get ready for the next cycle of loading and identification.
-
-### Expected output
-
-The app will display the probability distribution of the data loaded and the corresponding scenario.
-
-### Expected run time
-
-1min
-
----
+The application displays the predicted probability distribution and corresponding scenario. A typical run takes approximately one minute.
 
 ## License
 
 This project is licensed under the **MIT License**.
 
-**Disclaimer**: This project contains MATLAB code developed by the author. 
-A valid MATLAB license from The MathWorks, Inc. is required to run this code. 
-The code provided here is for research/demonstration purposes only and is 
-not affiliated with or endorsed by The MathWorks, Inc.
+**Disclaimer:** This project contains MATLAB code developed by the author. A valid MATLAB license from The MathWorks, Inc. is required to run the code. The code is provided for research and demonstration purposes only and is not affiliated with or endorsed by The MathWorks, Inc.

@@ -1,87 +1,82 @@
 clear; clc;
+rng(2026, 'twister');
 
-%% plot all data
+scriptDir = fileparts(mfilename('fullpath'));
+addpath(scriptDir);
+sourceDir = fullfile(scriptDir, 'data_origin');
+dataDir = fullfile(scriptDir, 'data');
 
-% folder_path = ".\data_origin\*";
-% file_names = dir(fullfile(folder_path, "*.xlsx"));
-% 
-% for i = 3
-%     figure;
-%     hold on
-%     for j = 1:10
-%         ind = (i-1) * 10 + j;
-%         file_path = fullfile(file_names(ind).folder, file_names(ind).name);
-%         m = readmatrix(file_path);
-%         plot(m(:,1), m(:,2), LineWidth=1);
-%         plot(m(:,1), m(:,3), LineWidth=1);
-%     end
-%     hold off
-%     txt = extractBefore(file_names(ind).name, ".");
-%     title(txt);
-% end
-
-%% segment every sequence into 10 pieces
-
-folder_path = ".\data_origin\*";
-file_names = dir(fullfile(folder_path, "*.xlsx"));
-
-params.snr_db = 20;               % 高斯噪声信噪比
-params.density = 0.05;            % 椒盐噪声密度
-params.amplitude_factor = 1.5;    % 椒盐噪声幅度因子
-
-name_dir_app = ".\Fabric\";
-if ~exist(name_dir_app, "dir")
-    mkdir(name_dir_app);
+if ~isfolder(sourceDir)
+    error('Extract data_origin.zip to: %s', sourceDir);
 end
 
-for i = 1:14
-    for j = 1:10
-        ind = (i-1) * 10 + j;
-        file_path = fullfile(file_names(ind).folder, file_names(ind).name);
-        m = readmatrix(file_path);
-        m_noisy = zeros(size(m, 1), 2);
-        
-        % segment
-        len0 = floor(length(m) / 10);
-        seq10 = (1:len0) + 9 * len0;
-        seq9 = (1:len0) + 8 * len0;
-        [~, index10] = min(m(seq10, 3));
-        [~, index9] = min(m(seq9, 3));
-        len = index10 - index9 + len0;
-        delay = max([floor(len0/2 - index10), 0]);
+%% Segment each recording into ten samples
+fileNames = dir(fullfile(sourceDir, '*', '*.xlsx'));
+expectedFileCount = 14 * 10;
+if numel(fileNames) ~= expectedFileCount
+    error('Expected %d XLSX files under %s, found %d.', ...
+        expectedFileCount, sourceDir, numel(fileNames));
+end
 
-        % add noise
-        m_noisy(:, 1) = addNoiseToSignal(m(:, 2), 'both', params);
-        m_noisy(:, 2) = addNoiseToSignal(m(:, 3), 'both', params);
-        if any(isnan(m_noisy), 'all')
-            error('i=%d, j=%d', i, j);
-        end
-        
-        mtmp = zeros(len, 2);
-        txt_folder = extractBefore(file_names(ind).name, ".");
-        txt_file = extractBetween(file_names(ind).name, ".", ".");
-        if str2double(txt_folder) < 10
-            name_dir = ".\data\0"+txt_folder;
-        else
-            name_dir = ".\data\"+txt_folder;
-        end
-        if ~exist(name_dir, "dir")
-            mkdir(name_dir);
-        end
-        for k = 1:10
-            seq_tmp =  length(m) - len - 1 - delay + (1:len) - (k-1) * len;
-            mtmp = m_noisy(seq_tmp, :);
-            path_new = name_dir + "\" ...
-            + txt_folder + "_" + txt_file{1} + "_" + num2str(11-k) + ".csv";
-            writematrix(mtmp(1:3100, :), path_new);
-        end
+params.snr_db = 20;
+params.density = 0.05;
+params.amplitude_factor = 1.5;
+segmentCount = 10;
+outputLength = 3100;
+
+for ind = 1:numel(fileNames)
+    filePath = fullfile(fileNames(ind).folder, fileNames(ind).name);
+    m = readmatrix(filePath);
+    if size(m, 2) < 3
+        error('Expected at least three columns in %s.', filePath);
     end
-    Data = m(seq_tmp, 2:3);
-    Data = Data(1:3100, :);
-    DataNoisy = mtmp(1:3100, :);
-    mat_file = sprintf("%02d.mat", str2double(txt_folder));
-    output = name_dir_app + mat_file;
-%     save(output, 'Data', "DataNoisy");
+
+    noisyData = zeros(size(m, 1), 2);
+
+    baseLength = floor(size(m, 1) / segmentCount);
+    seq10 = (1:baseLength) + 9 * baseLength;
+    seq9 = (1:baseLength) + 8 * baseLength;
+    [~, index10] = min(m(seq10, 3));
+    [~, index9] = min(m(seq9, 3));
+    segmentLength = index10 - index9 + baseLength;
+    delay = max(floor(baseLength / 2 - index10), 0);
+
+    noisyData(:, 1) = addNoiseToSignal(m(:, 2), 'both', params);
+    noisyData(:, 2) = addNoiseToSignal(m(:, 3), 'both', params);
+    if any(isnan(noisyData), 'all')
+        error('Noise generation produced NaN values for %s.', filePath);
+    end
+
+    [~, className] = fileparts(fileNames(ind).folder);
+    classId = str2double(className);
+    if isnan(classId)
+        error('Invalid class folder: %s', fileNames(ind).folder);
+    end
+
+    outputDir = fullfile(dataDir, sprintf('%02d', classId));
+    if ~isfolder(outputDir)
+        mkdir(outputDir);
+    end
+
+    [~, fileStem] = fileparts(fileNames(ind).name);
+    trialId = extractAfter(string(fileStem), '.');
+
+    for segmentId = 1:segmentCount
+        sampleIndices = size(m, 1) - segmentLength - 1 - delay ...
+            + (1:segmentLength) - (segmentId - 1) * segmentLength;
+        if min(sampleIndices) < 1 || max(sampleIndices) > size(m, 1)
+            error('Invalid segment indices for %s.', filePath);
+        end
+
+        segment = noisyData(sampleIndices, :);
+        if size(segment, 1) < outputLength
+            error('Segment in %s is shorter than %d samples.', filePath, outputLength);
+        end
+
+        outputName = sprintf('%s_%s_%d.csv', className, char(trialId), ...
+            segmentCount + 1 - segmentId);
+        writematrix(segment(1:outputLength, :), fullfile(outputDir, outputName));
+    end
 end
 
 

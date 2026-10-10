@@ -1,6 +1,6 @@
 function myFun_press(input, output, params)
 
-%% Load input file
+%% Load waveform
 m = readmatrix(input);
 waveform_even= m(:, 2);
 waveform_odd = m(:, 3);
@@ -12,7 +12,7 @@ waveform_odd = waveform_odd / abs(min(waveform_odd));
 
 len = length(waveform_even);
 
-%% Load parameters and creare array
+%% Configure array
 if isfield(params, 'fs')
     fs = params.fs;
 else
@@ -80,7 +80,7 @@ switch category
         error('Error category');
 end
 
-%% Generate data
+%% Generate sample
 distance1 = sqrt((x_grid - selected_col).^2 + (y_grid - selected_row).^2);
 distance1 = distance1 * time_per_frame;
 distance2 = sqrt((x_grid - selected_col - delta).^2 + (y_grid - selected_row).^2);
@@ -125,7 +125,7 @@ for frame = 1:total_frames
     all_data(:, :, frame) = intensity;
 end
 
-%% Save all data
+%% Save sample
 all_data = single(all_data);
 save(output, 'all_data');
 

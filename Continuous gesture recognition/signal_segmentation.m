@@ -1,65 +1,60 @@
 clear; clc;
+rng(2026, 'twister');
 
-t = 0:0.1:5.3;
-len = length(t);
+scriptDir = fileparts(mfilename('fullpath'));
+addpath(scriptDir);
+sourceDir = fullfile(scriptDir, 'data_origin');
+dataDir = fullfile(scriptDir, 'data');
+
+if ~isfolder(sourceDir)
+    error('Extract data_origin.zip to: %s', sourceDir);
+end
+
+time = 0:0.1:5.3;
+sequenceLength = length(time);
 numChannels = 16;
 
-%% plot all data
-
-% folder_path = ".\data_origin\*";
-% file_names = dir(fullfile(folder_path, "*.xlsx"));
-% 
-% for i = 1:1
-%     figure;
-%     hold on
-%     for j = 1:10
-%         ind = (i-1) * 100 + j;
-%         file_path = fullfile(file_names(ind).folder, file_names(ind).name);
-%         m = readmatrix(file_path);
-%         plot(t, m(1:len,2:end), LineWidth=1);  
-%     end
-%     hold off
-%     txt = extractAfter(file_names(ind).folder, "data_origin\");
-%     title(txt);
-% end
-
-%% segment every sequence into 10 pieces
-
-folder_path = ".\data_origin\*";
-file_names = dir(fullfile(folder_path, "*.xlsx"));
+%% Convert each recording to a 16-channel sample
+fileNames = dir(fullfile(sourceDir, '*', '*.xlsx'));
+expectedFileCount = 10 * 100;
+if numel(fileNames) ~= expectedFileCount
+    error('Expected %d XLSX files under %s, found %d.', ...
+        expectedFileCount, sourceDir, numel(fileNames));
+end
 
 params.snr_db = 10;
 params.density = 0.03;
 params.amplitude_factor = 1.5;
 
-for i = 1:1
-    for j = 1:100
-        ind = (i-1) * 100 + j;
-        file_path = fullfile(file_names(ind).folder, file_names(ind).name);
-        m = readmatrix(file_path);
-        m = m(1:len, :);
-        m_noisy = zeros(len, numChannels);
-        
-        % add noise
-        for k = 1:numChannels
-            m_noisy(:, k) = addNoiseToSignal(m(:, k+1), 'both', params);
-        end
-        if any(isnan(m_noisy), 'all')
-            error('i=%d, j=%d', i, j);
-        end
-
-        txt_folder = extractAfter(file_names(ind).folder, "data_origin\");
-        txt_file = extractBetween(file_names(ind).name, "_", ".");
-        if str2double(txt_folder) < 10
-            name_dir = ".\data\0"+txt_folder;
-        else
-            name_dir = ".\data\"+txt_folder;
-        end
-        if ~exist(name_dir, "dir")
-            mkdir(name_dir);
-        end
-        path_new = name_dir + "\" ...
-        + txt_folder + "_" + txt_file{1} + ".csv";
-        writematrix(m_noisy, path_new);
+for ind = 1:numel(fileNames)
+    filePath = fullfile(fileNames(ind).folder, fileNames(ind).name);
+    m = readmatrix(filePath);
+    if size(m, 1) < sequenceLength || size(m, 2) < numChannels + 1
+        error('Unexpected sample size in %s.', filePath);
     end
+
+    m = m(1:sequenceLength, :);
+    noisyData = zeros(sequenceLength, numChannels);
+    for channel = 1:numChannels
+        noisyData(:, channel) = addNoiseToSignal(m(:, channel + 1), 'both', params);
+    end
+    if any(isnan(noisyData), 'all')
+        error('Noise generation produced NaN values for %s.', filePath);
+    end
+
+    [~, className] = fileparts(fileNames(ind).folder);
+    classId = str2double(className);
+    if isnan(classId)
+        error('Invalid class folder: %s', fileNames(ind).folder);
+    end
+
+    outputDir = fullfile(dataDir, sprintf('%02d', classId));
+    if ~isfolder(outputDir)
+        mkdir(outputDir);
+    end
+
+    [~, fileStem] = fileparts(fileNames(ind).name);
+    trialId = extractAfter(string(fileStem), '_');
+    outputName = sprintf('%s_%s.csv', className, char(trialId));
+    writematrix(noisyData, fullfile(outputDir, outputName));
 end

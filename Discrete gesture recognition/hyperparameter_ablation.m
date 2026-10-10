@@ -1,45 +1,46 @@
-%% ========================================================================
-%  超参数消融实验完整脚本
-%  适用架构：CNN (Conv2D + MaxPooling + FC)
-%  作者：根据审稿意见编写
-%  说明：每次只运行一个实验部分（用 %% 分隔），跑完记录结果
-% ========================================================================
 
-clear; clc; close all; rng(2026);  % 固定随机种子，保证可重复
+%% Discrete CNN hyperparameter ablation
+% Architecture: Conv2D, max pooling, and fully connected layers.
 
-%% ========================================================================
-%  第一部分：数据加载与预处理（固定不变，所有实验共用）
-% ========================================================================
+% Run sections independently when needed.
+
+clear; clc; close all; rng(2026, 'twister');
+
+scriptDir = fileparts(mfilename('fullpath'));
+dataDir = fullfile(scriptDir, 'data');
+resultsDir = fullfile(scriptDir, 'results');
+if ~isfolder(dataDir)
+    error('Run signal_segmentation.m first to create: %s', dataDir);
+end
+if ~isfolder(resultsDir)
+    mkdir(resultsDir);
+end
+
+%% Load and preprocess data
 
 fprintf('========== 开始加载数据 ==========\n');
 
-% 1. 读取数据
-sigds = signalDatastore("data\", IncludeSubfolders=true, ReadFcn=@readmatrix);
-labels = folders2labels("data\");
+sigds = signalDatastore(dataDir, IncludeSubfolders=true, ReadFcn=@readmatrix);
+labels = folders2labels(dataDir);
 sigdata = readall(sigds);
 
-% 2. 去基线
 sigdata = cellfun(@(x) x - mean(x), sigdata, 'UniformOutput', false);
 
-% 3. 全局归一化
 allData = cat(1, sigdata{:});
 globalMean = mean(allData);
 globalStd  = std(allData);
 globalStd(globalStd == 0) = 1;
 sigdata = cellfun(@(x) (x - globalMean) ./ globalStd, sigdata, 'UniformOutput', false);
 
-% 4. 划分训练/验证/测试集（固定划分，保证不同实验公平可比）
 idx = splitlabels(labels, [0.8 0.1]);
 trainidx = idx{1};
 validx   = idx{2};
 testidx  = idx{3};
 
-% 基础参数（窗口长度默认3100）
 inputSize = 3100;
 numChannels = 2;
 numClasses = 14;
 
-% 准备训练集和验证集（仅用于窗口长度不变的实验）
 traindata = prepareDataForImageInput(sigdata(trainidx), inputSize, numChannels);
 trainlabels = labels(trainidx);
 valdata   = prepareDataForImageInput(sigdata(validx), inputSize, numChannels);
@@ -47,25 +48,14 @@ vallabels = labels(validx);
 
 fprintf('数据加载完成！训练集: %d, 验证集: %d\n', size(traindata,4), size(valdata,4));
 
-% 通用训练参数
 MiniBatchSize = 32;
 Val_Freq = floor(size(traindata, 4) / MiniBatchSize);
-MaxEpochs = 30;  % 正式实验用30，快速测试可改10
+MaxEpochs = 30;
 
-%% ========================================================================
-%  辅助函数：构建网络 + 训练 + 评估（放在文件底部，这里先定义调用）
-% ========================================================================
-
-% (函数定义见文件末尾，MATLAB要求主脚本中函数写在最后)
-
-%% ========================================================================
-%  实验 1：卷积核宽度（Kernel Width）消融
-%  候选值：1, 3(默认), 5, 7
-% ========================================================================
+%% Experiment 1: Kernel width
 
 fprintf('\n========== 实验 1：卷积核宽度消融 ==========\n');
 
-% 候选值列表（第一个为你的默认值）
 candidates_kernel = [3, 1, 5, 7];
 results_kernel = table();
 
@@ -73,11 +63,11 @@ for i = 1:length(candidates_kernel)
     k = candidates_kernel(i);
     fprintf('\n>>> 正在测试卷积核宽度 = %d (%d/%d) ...\n', k, i, length(candidates_kernel));
     
-    % 构建网络层
+
     layers = buildCNNLayers(inputSize, numChannels, numClasses, ...
                             k, [4, 8], 2, 64, 0.5);
     
-    % 训练选项
+
     opts = trainingOptions("adam", ...
         ExecutionEnvironment="auto", ...
         MaxEpochs=MaxEpochs, ...
@@ -90,19 +80,19 @@ for i = 1:length(candidates_kernel)
         Plots="none", ...
         Verbose=false);
     
-    % 训练并计时
+
     tic;
     net = trainNetwork(traindata, trainlabels, layers, opts);
     elapsedTime = toc;
     
-    % 验证集评估
+
     valPred = classify(net, valdata, 'MiniBatchSize', MiniBatchSize);
     valAcc  = mean(valPred == vallabels);
     
-    % 计算参数量
+
     numParams = countParams(net);
     
-    % 记录结果
+
     results_kernel = [results_kernel; table(k, valAcc, numParams, elapsedTime, ...
         'VariableNames', {'KernelWidth', 'ValAcc', 'Params', 'TrainTime'})];
     
@@ -111,16 +101,13 @@ end
 
 disp('----- 实验1结果 -----');
 disp(results_kernel);
-save('Ablation_Results_Kernel.mat', 'results_kernel');
+save(fullfile(resultsDir, 'Ablation_Results_Kernel.mat'), 'results_kernel');
 
-%% ========================================================================
-%  实验 2：卷积核通道数（Num Filters）消融
-%  候选值：[2,4], [4,8](默认), [8,16]
-% ========================================================================
+%% Experiment 2: Filter counts
 
 fprintf('\n========== 实验 2：卷积核通道数消融 ==========\n');
 
-candidates_filters = {[4,8], [2,4], [8,16]};  % 元胞数组，因为每行两个数
+candidates_filters = {[4,8], [2,4], [8,16]};
 results_filters = table();
 
 for i = 1:length(candidates_filters)
@@ -159,12 +146,9 @@ end
 
 disp('----- 实验2结果 -----');
 disp(results_filters);
-save('Ablation_Results_Filters.mat', 'results_filters');
+save(fullfile(resultsDir, 'Ablation_Results_Filters.mat'), 'results_filters');
 
-%% ========================================================================
-%  实验 3：池化步长（Pooling Stride）消融
-%  候选值：1, 2(默认), 3
-% ========================================================================
+%% Experiment 3: Pooling stride
 
 fprintf('\n========== 实验 3：池化步长消融 ==========\n');
 
@@ -206,12 +190,9 @@ end
 
 disp('----- 实验3结果 -----');
 disp(results_stride);
-save('Ablation_Results_Stride.mat', 'results_stride');
+save(fullfile(resultsDir, 'Ablation_Results_Stride.mat'), 'results_stride');
 
-%% ========================================================================
-%  实验 4：全连接层单元数（FC Units）消融
-%  候选值：32, 64(默认), 128
-% ========================================================================
+%% Experiment 4: Fully connected units
 
 fprintf('\n========== 实验 4：全连接层单元数消融 ==========\n');
 
@@ -253,12 +234,9 @@ end
 
 disp('----- 实验4结果 -----');
 disp(results_fc);
-save('Ablation_Results_FC.mat', 'results_fc');
+save(fullfile(resultsDir, 'Ablation_Results_FC.mat'), 'results_fc');
 
-%% ========================================================================
-%  实验 5：Dropout比率消融
-%  候选值：0.3, 0.5(默认), 0.7
-% ========================================================================
+%% Experiment 5: Dropout rate
 
 fprintf('\n========== 实验 5：Dropout比率消融 ==========\n');
 
@@ -300,12 +278,9 @@ end
 
 disp('----- 实验5结果 -----');
 disp(results_drop);
-save('Ablation_Results_Dropout.mat', 'results_drop');
+save(fullfile(resultsDir, 'Ablation_Results_Dropout.mat'), 'results_drop');
 
-%% ========================================================================
-%  实验 6：输入窗口长度（Window Length）消融  ⚠️ 需重新切数据
-%  候选值：1550, 3100(默认), 6200
-% ========================================================================
+%% Experiment 6: Input window length
 
 fprintf('\n========== 实验 6：窗口长度消融（需重切数据，较耗时） ==========\n');
 
@@ -316,14 +291,14 @@ for i = 1:length(candidates_win)
     win = candidates_win(i);
     fprintf('\n>>> 正在测试窗口长度 = %d (%d/%d) ...\n', win, i, length(candidates_win));
     
-    % ---- 关键：重新切片数据 ----
+
     traindata_win = prepareDataForImageInput_win(sigdata(trainidx), win, numChannels);
     valdata_win   = prepareDataForImageInput_win(sigdata(validx), win, numChannels);
     
-    % 更新 ValidationFrequency（因为训练集大小变了）
+
     local_Val_Freq = floor(size(traindata_win, 4) / MiniBatchSize);
     
-    % 构建网络（注意 inputSize 换成 win）
+
     layers = buildCNNLayers(win, numChannels, numClasses, ...
                             3, [4, 8], 2, 64, 0.5);
     
@@ -355,17 +330,13 @@ end
 
 disp('----- 实验6结果 -----');
 disp(results_win);
-save('Ablation_Results_Window.mat', 'results_win');
+save(fullfile(resultsDir, 'Ablation_Results_Window.mat'), 'results_win');
 
 fprintf('\n========== 所有消融实验执行完毕！ ==========\n');
 
+%% Local functions
 
-%% ========================================================================
-%  ===================== 下方为所有自定义函数 =============================
-%  MATLAB要求：主脚本中的函数定义必须放在文件末尾
-% ========================================================================
-
-%% 函数 1：标准网络构建（卷积核宽度、通道数、FC、Dropout可调）
+%% Build the configurable CNN
 function layers = buildCNNLayers(inputSize, numChannels, numClasses, ...
                                  kernelWidth, numFilters, stride, fcUnits, dropoutRate)
     layers = [
@@ -390,10 +361,10 @@ function layers = buildCNNLayers(inputSize, numChannels, numClasses, ...
     ];
 end
 
-%% 函数 2：专门用于池化步长消融（结构相同，单独写是为了避免参数歧义）
+%% Build the pooling-stride variant
 function layers = buildCNNLayers_stride(inputSize, numChannels, numClasses, ...
                                         kernelWidth, numFilters, stride, fcUnits, dropoutRate)
-    % 与 buildCNNLayers 完全一样，但为了实验3单独调用，保持清晰
+
     layers = [
         imageInputLayer([1 inputSize numChannels], "Name", "imageinput")
         
@@ -416,7 +387,7 @@ function layers = buildCNNLayers_stride(inputSize, numChannels, numClasses, ...
     ];
 end
 
-%% 函数 3：统计模型总参数量
+%% Count trainable parameters
 function totalParams = countParams(net)
     totalParams = 0;
     for l = 1:length(net.Layers)
@@ -429,13 +400,13 @@ function totalParams = countParams(net)
     end
 end
 
-%% 函数 4：准备固定窗口数据（你的原函数，保留）
+%% Prepare fixed-length inputs
 function X = prepareDataForImageInput(cellData, inputSize, numChannels)
     numSamples = length(cellData);
     X = zeros(1, inputSize, numChannels, numSamples);
     for i = 1:numSamples
         sample = cellData{i};
-        % 如果长度不足则补零（以防万一）
+
         if size(sample, 1) < inputSize
             sample = [sample; zeros(inputSize - size(sample,1), numChannels)];
         else
@@ -445,7 +416,7 @@ function X = prepareDataForImageInput(cellData, inputSize, numChannels)
     end
 end
 
-%% 函数 5：准备可变窗口数据（用于实验6）
+%% Prepare variable-length inputs
 function X = prepareDataForImageInput_win(cellData, inputSize, numChannels)
     numSamples = length(cellData);
     X = zeros(1, inputSize, numChannels, numSamples);
